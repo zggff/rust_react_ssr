@@ -1,7 +1,7 @@
-import './App.scss'
 import { Link, Route, Routes } from 'react-router-dom'
+import React from 'react'
 
-function App() {
+const App: React.FC = () => {
     return (
         <div className='App'>
             <nav>

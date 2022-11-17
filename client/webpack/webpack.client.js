@@ -1,21 +1,21 @@
-import path from "path";
-import { CleanWebpackPlugin } from "clean-webpack-plugin";
-import MiniCssExtractPlugin from "mini-css-extract-plugin";
-import { fileURLToPath } from "url";
-import webpack from "webpack";
+import path from 'path'
+import { CleanWebpackPlugin } from 'clean-webpack-plugin'
+import MiniCssExtractPlugin from 'mini-css-extract-plugin'
+import { fileURLToPath } from 'url'
+import webpack from 'webpack'
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
-const buildDirectory = "../dist";
-const outputDirectory = `${buildDirectory}/client`;
+const buildDirectory = '../dist'
+const outputDirectory = `${buildDirectory}/client`
 export default {
-    mode: "production",
-    target: "web",
-    entry: path.resolve(__dirname, "../src/index.tsx"),
+    mode: 'production',
+    target: 'web',
+    entry: path.resolve(__dirname, '../src/index.tsx'),
     output: {
         path: path.join(__dirname, outputDirectory),
-        filename: "bundle.js",
+        filename: 'bundle.js',
     },
     module: {
         rules: [
@@ -23,17 +23,17 @@ export default {
                 test: /\.(js|ts|jsx|tsx)$/,
                 exclude: /node_modules/,
                 use: {
-                    loader: "ts-loader",
+                    loader: 'ts-loader',
                 },
             },
             {
                 test: /\.(png|jp(e*)g|svg|gif)$/,
                 use: [
                     {
-                        loader: "file-loader",
+                        loader: 'file-loader',
                         options: {
-                            publicPath: "/",
-                            name: "images/[hash]-[name].[ext]",
+                            publicPath: '/',
+                            name: 'images/[hash]-[name].[ext]',
                         },
                     },
                 ],
@@ -42,28 +42,30 @@ export default {
                 test: /\.s[ac]ss$/i,
                 use: [
                     MiniCssExtractPlugin.loader,
-                    "css-loader",
-                    "postcss-loader",
-                    "sass-loader",
+                    'css-loader',
+                    'postcss-loader',
+                    'sass-loader',
                 ],
             },
         ],
     },
     resolve: {
         fallback: { fs: false, path: false },
-        extensions: [".tsx", ".ts", ".js", ".jsx"],
+        extensions: ['.tsx', '.ts', '.js', '.jsx'],
     },
     plugins: [
         new webpack.ProvidePlugin({
-            Buffer: ["buffer", "Buffer"],
+            Buffer: ['buffer', 'Buffer'],
         }),
         new CleanWebpackPlugin({
-            cleanOnceBeforeBuildPatterns: [path.join(__dirname, buildDirectory)],
+            cleanOnceBeforeBuildPatterns: [
+                path.join(__dirname, buildDirectory),
+            ],
         }),
         new MiniCssExtractPlugin({
             // publicPath: '/',
 
-            filename: "bundle.css",
+            filename: 'bundle.css',
         }),
     ],
-};
+}

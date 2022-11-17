@@ -1,4 +1,3 @@
-import React from 'react'
 import { renderToString, renderToStaticMarkup } from 'react-dom/server'
 import App from './App'
 import { StaticRouter } from 'react-router-dom/server'
@@ -6,7 +5,6 @@ import './index.scss'
 
 export const Index = (params: string | undefined) => {
     const props = params ? JSON.parse(params) : {}
-    // const app = renderToString(<App {...props} />);
     const app = renderToString(
         <StaticRouter {...props}>
             <App />
