@@ -3,44 +3,29 @@ use std::collections::HashMap;
 use v8::GetPropertyNamesArgs;
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct SsrV8<'a> {
+pub struct Ssr {
     source: String,
-    entry_point: &'a str,
 }
-
-impl<'a> SsrV8<'a> {
-    pub fn new(source: String, entry_point: &'a str) -> Self {
-        Self::init_platform();
-
-        SsrV8 {
-            source,
-            entry_point,
-        }
+impl Ssr {
+    pub fn initialize() {
+        let platform = v8::new_default_platform(0, false).make_shared();
+        v8::V8::initialize_platform(platform);
+        v8::V8::initialize();
     }
 
-    fn init_platform() {
-        lazy_static! {
-          static ref INIT_PLATFORM: () = {
-              //Initialize a new V8 platform
-              let platform = v8::new_default_platform(0, false).make_shared();
-              v8::V8::initialize_platform(platform);
-              v8::V8::initialize();
-          };
-        }
-
-        lazy_static::initialize(&INIT_PLATFORM);
+    pub fn new(source: String) -> Self {
+        Ssr { source }
     }
-    pub fn one_shot_render(source: String, entry_point: &str, params: Option<&str>) -> String {
-        Self::init_platform();
 
-        Self::render(source, entry_point, params)
+    pub fn one_shot_render(source: &str, params: Option<&str>) -> String {
+        Self::render(source, params)
     }
 
     pub fn render_to_string(&self, params: Option<&str>) -> String {
-        Self::render(self.source.clone(), self.entry_point, params)
+        Self::render(&self.source, params)
     }
 
-    fn render(source: String, entry_point: &str, params: Option<&str>) -> String {
+    fn render(source: &str, params: Option<&str>) -> String {
         //The isolate rapresente an isolated instance of the v8 engine
         //Object from one isolate must not be used in other isolates.
         let isolate = &mut v8::Isolate::new(Default::default());
@@ -57,8 +42,7 @@ impl<'a> SsrV8<'a> {
         // this is use for react 18, need to remove from typescript lib.dom.d.ts, refer to this issue https://github.com/microsoft/TypeScript/issues/31535
         // let prefix = POLYFILL.as_str();
 
-        let code = v8::String::new(scope, &format!("{};{}", source, entry_point))
-            .expect("Invalid JS: Strings are needed");
+        let code = v8::String::new(scope, source).expect("Invalid JS: Strings are needed");
 
         let script = v8::Script::compile(scope, code, None)
             .expect("Invalid JS: There aren't runnable scripts");
