@@ -1,11 +1,5 @@
-:root {
-    font-family: Helvetica, Arial;
-    font-size: 16px;
-    line-height: 24px;
-    font-weight: 400;
-    background-color: whitesmoke;
-}
-
-h1 {
-    color: red;
-}
+// include tailwind-css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@tailwind variants;

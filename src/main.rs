@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate lazy_static;
+
 use actix_files as fs;
 use actix_web::{
     get, http::StatusCode, middleware::Logger, App, HttpRequest, HttpResponse, HttpServer,
@@ -5,8 +8,7 @@ use actix_web::{
 };
 use std::fs::read_to_string;
 
-#[macro_use]
-extern crate lazy_static;
+mod ssr;
 
 lazy_static! {
     pub static ref JS_CODE: String = {
@@ -16,10 +18,6 @@ lazy_static! {
         result
     };
 }
-
-use ssr::SsrV8;
-
-mod ssr;
 
 #[actix_web::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -41,6 +39,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+// INFO: look into ts-rs https://github.com/Aleph-Alpha/ts-rs for common types between rust and typescript
+
 #[get("{url}*")]
 async fn index(req: HttpRequest) -> impl Responder {
     let props = format!(
@@ -51,7 +51,7 @@ async fn index(req: HttpRequest) -> impl Responder {
         req.uri()
     );
 
-    let js = SsrV8::new(JS_CODE.to_owned(), "SSR");
+    let js = ssr::SsrV8::new(JS_CODE.to_owned(), "SSR");
     let html = js.render_to_string(Some(&props));
 
     HttpResponse::build(StatusCode::OK)
