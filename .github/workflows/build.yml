@@ -1,0 +1,49 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        required: true
+        desctiption: "release tag name"
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build frontend
+        run: |
+          cd client 
+          yarn
+          yarn build:all
+      - name: Build backend
+        run: |
+          cargo build --release
+
+      - name: Package Artifacts
+        run: |
+          src=$(pwd)
+          stage=$(mktemp -d)
+          cp ./target/release/backend $stage/
+          cp -r ./client/dist $stage/
+          cd $stage
+          ASSET_NAME="release.tar.gz"
+          ASSET_PATH="$src/$ASSET_NAME"
+          echo $RELEASE_VERSION
+          echo $ASSET_NAME
+          echo $ASSET_PATH
+          echo "ASSET_PATH=$ASSET_PATH" >> $GITHUB_ENV
+          tar czf $ASSET_PATH *
+          cd $src
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{github.event.inputs.tag_name}}
+          files: |
+            ${{ env.ASSET_PATH }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
