@@ -1,6 +1,7 @@
 import path from 'path'
 import { CleanWebpackPlugin } from 'clean-webpack-plugin'
 import MiniCssExtractPlugin from 'mini-css-extract-plugin'
+import CopyPlugin from 'copy-webpack-plugin'
 import { fileURLToPath } from 'url'
 import webpack from 'webpack'
 
@@ -27,7 +28,7 @@ export default {
                 },
             },
             {
-                test: /\.(png|jp(e*)g|svg|gif)$/,
+                test: /\.(png|jp(e*)g|svg|gif|webp)$/,
                 use: [
                     {
                         loader: 'file-loader',
@@ -54,6 +55,13 @@ export default {
         extensions: ['.tsx', '.ts', '.js', '.jsx'],
     },
     plugins: [
+        new CopyPlugin({
+            patterns: [
+                {
+                    from: './public/sitemap.xml',
+                },
+            ],
+        }),
         new webpack.ProvidePlugin({
             Buffer: ['buffer', 'Buffer'],
         }),

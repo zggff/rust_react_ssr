@@ -1,3 +1,6 @@
+use std::path::PathBuf;
+
+use actix_cors::Cors;
 use actix_files as fs;
 use actix_web::{
     get, http::StatusCode, middleware::Logger, web::scope, App, HttpRequest, HttpResponse,
@@ -9,9 +12,9 @@ use ssr::Ssr;
 
 mod cache;
 mod ssr;
-mod tls;
 
 static SSR: OnceCell<Ssr> = OnceCell::new();
+static DIST: OnceCell<PathBuf> = OnceCell::new();
 
 #[derive(Debug, Parser)]
 struct Args {
@@ -22,13 +25,6 @@ struct Args {
     /// frontend dist directory
     #[arg(short, long, default_value_t = String::from("./client/dist"))]
     dir: String,
-
-    /// ssl private key
-    #[arg(long)]
-    key: Option<String>,
-    /// ssl public certificate
-    #[arg(long)]
-    cert: Option<String>,
 }
 
 #[actix_web::main]
@@ -37,7 +33,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
 
     let args = Args::parse();
-    let client_path = std::path::PathBuf::from(args.dir);
+    let client_path = PathBuf::from(args.dir);
+    DIST.set(client_path.clone()).unwrap();
 
     {
         // initialize Server side rendering
@@ -51,9 +48,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .expect("failed to set global variable");
     }
 
-    let mut server = HttpServer::new(move || {
+    HttpServer::new(move || {
+        let cors = if cfg!(debug_assertions) {
+            Cors::permissive()
+        } else {
+            Cors::default().allowed_methods(vec!["GET", "POST"])
+        };
+
         App::new()
             .wrap(Logger::default())
+            .wrap(cors)
             .service(scope("/styles").wrap(cache::CacheInterceptor).service(
                 fs::Files::new("", client_path.as_path().join("ssr/styles/")).show_files_listing(),
             ))
@@ -65,16 +69,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ))
             .service(index)
     })
-    .bind(("0.0.0.0", args.port))?;
-
-    if let (Some(key), Some(cert)) = (args.key, args.cert) {
-        let config = tls::load_rustls_config(&key, &cert);
-        server = server.bind_rustls("0.0.0.0:443", config)?;
-    }
-
-    server.run().await?;
+    .bind(("0.0.0.0", args.port))?
+    .run()
+    .await?;
 
     Ok(())
+}
+
+#[get("/sitemap")]
+async fn sitemap() -> actix_web::Result<actix_files::NamedFile> {
+    Ok(actix_files::NamedFile::open(
+        DIST.get().unwrap().as_path().join("client/sitemap.xml"),
+    )?)
 }
 
 #[get("{url}*")]

@@ -2,6 +2,7 @@ import { renderToString, renderToStaticMarkup } from 'react-dom/server'
 import App from './App'
 import { StaticRouter } from 'react-router-dom/server'
 import './index.scss'
+import { Helmet } from 'react-helmet'
 
 export const Index = (params: string | undefined) => {
     const props = params ? JSON.parse(params) : {}
@@ -10,13 +11,16 @@ export const Index = (params: string | undefined) => {
             <App />
         </StaticRouter>
     )
+    const helmet = Helmet.renderStatic()
 
     return `<!doctype html>
   <html lang="en">
     <head>
-      <title>React RUST SSR</title>
       <link rel="stylesheet" href="/styles/ssr.css">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      ${helmet.title.toString()}
+      ${helmet.meta.toString()}
+      ${helmet.link.toString()}
     </head>
     
     ${renderToStaticMarkup(

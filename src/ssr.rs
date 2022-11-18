@@ -16,11 +16,6 @@ impl Ssr {
     pub fn new(source: String) -> Self {
         Ssr { source }
     }
-
-    pub fn one_shot_render(source: &str, params: Option<&str>) -> String {
-        Self::render(source, params)
-    }
-
     pub fn render_to_string(&self, params: Option<&str>) -> String {
         Self::render(&self.source, params)
     }
