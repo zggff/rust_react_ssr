@@ -1,11 +1,9 @@
 name: Release
 
 on:
-  workflow_dispatch:
-    inputs:
-      tag_name:
-        required: true
-        desctiption: "release tag name"
+  push:
+    tags:
+      - v*
 
 env:
   CARGO_TERM_COLOR: always
@@ -15,6 +13,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - name: Cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.rustup
+            target
+          key: ${{ runner.os }}-deps
       - name: Build frontend
         run: |
           cd client 
@@ -27,23 +34,48 @@ jobs:
       - name: Package Artifacts
         run: |
           src=$(pwd)
-          stage=$(mktemp -d)
+          stage=
+          case $RUNNER_OS in
+              Linux)
+                  stage=$(mktemp -d)
+                  ;;
+              macOS)
+                  stage=$(mktemp -d -t tmp)
+                  ;;
+          esac
+
           cp ./target/release/backend $stage/
           cp -r ./client/dist $stage/
           cd $stage
-          ASSET_NAME="release.tar.gz"
+
+          RELEASE_VERSION=${GITHUB_REF#refs/tags/}
+          ASSET_NAME="release-$RELEASE_VERSION.tar.gz"
           ASSET_PATH="$src/$ASSET_NAME"
-          echo $RELEASE_VERSION
-          echo $ASSET_NAME
-          echo $ASSET_PATH
+
+          CHECKSUM_PATH="$ASSET_PATH.sha256"
+
           echo "ASSET_PATH=$ASSET_PATH" >> $GITHUB_ENV
+          echo "CHECKSUM_PATH=$CHECKSUM_PATH" >> $GITHUB_ENV
+
           tar czf $ASSET_PATH *
+
           cd $src
+
+          case $RUNNER_OS in
+              Linux)
+                  sha256sum $ASSET_NAME > $CHECKSUM_PATH
+                  ;;
+              macOS)
+                  shasum -a 256 $ASSET_NAME > $CHECKSUM_PATH
+                  ;;
+          esac
+
       - name: Release
         uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
         with:
-          tag_name: ${{github.event.inputs.tag_name}}
           files: |
             ${{ env.ASSET_PATH }}
+            ${{ env.CHECKSUM_PATH }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

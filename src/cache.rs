@@ -63,7 +63,7 @@ where
         let cache = if cfg!(debug_assertions) {
             no_cache
         } else {
-            HeaderValue::from_str(format!("{}", self.age).as_str()).unwrap_or(no_cache)
+            HeaderValue::from_str(format!("max-age={}", self.age).as_str()).unwrap_or(no_cache)
         };
 
         Box::pin(async move {
@@ -74,4 +74,3 @@ where
         })
     }
 }
-
