@@ -1,12 +1,25 @@
 use actix_web::{
     dev::{forward_ready, Service, ServiceRequest, ServiceResponse, Transform},
+    http::header::{HeaderValue, CACHE_CONTROL},
     Error,
 };
 use futures_util::future::LocalBoxFuture;
 use std::future::ready;
 use std::future::Ready;
 
-pub struct CacheInterceptor;
+pub struct CacheInterceptor(u32);
+
+impl CacheInterceptor {
+    pub fn new(days: u32) -> Self {
+        CacheInterceptor(days * 24 * 60 * 60)
+    }
+}
+
+impl Default for CacheInterceptor {
+    fn default() -> Self {
+        CacheInterceptor::new(7)
+    }
+}
 
 impl<S, B> Transform<S, ServiceRequest> for CacheInterceptor
 where
@@ -21,11 +34,15 @@ where
     type Future = Ready<Result<Self::Transform, Self::InitError>>;
 
     fn new_transform(&self, service: S) -> Self::Future {
-        ready(Ok(CacheInterceptorMiddleware { service }))
+        ready(Ok(CacheInterceptorMiddleware {
+            service,
+            age: self.0,
+        }))
     }
 }
 
 pub struct CacheInterceptorMiddleware<S> {
+    age: u32,
     service: S,
 }
 
@@ -42,21 +59,19 @@ where
     forward_ready!(service);
     fn call(&self, req: ServiceRequest) -> Self::Future {
         let fut = self.service.call(req);
-        Box::pin(async move {
-            #[cfg(not(debug_assertions))]
-            {
-                use actix_web::http::header::{HeaderValue, CACHE_CONTROL};
+        let no_cache = HeaderValue::from_static("no-cache");
+        let cache = if cfg!(debug_assertions) {
+            no_cache
+        } else {
+            HeaderValue::from_str(format!("{}", self.age).as_str()).unwrap_or(no_cache)
+        };
 
-                let mut res = fut.await?;
-                let headers = res.headers_mut();
-                headers.append(CACHE_CONTROL, HeaderValue::from_static("max-age=604800"));
-                Ok(res)
-            }
-            #[cfg(debug_assertions)]
-            {
-                let res = fut.await?;
-                Ok(res)
-            }
+        Box::pin(async move {
+            let mut res = fut.await?;
+            let headers = res.headers_mut();
+            headers.append(CACHE_CONTROL, cache);
+            Ok(res)
         })
     }
 }
+

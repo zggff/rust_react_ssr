@@ -3,8 +3,8 @@ use std::path::PathBuf;
 use actix_cors::Cors;
 use actix_files as fs;
 use actix_web::{
-    get, http::StatusCode, middleware::Logger, web::scope, App, HttpRequest, HttpResponse,
-    HttpServer, Responder,
+    get, http::StatusCode, middleware, web::scope, App, HttpRequest, HttpResponse, HttpServer,
+    Responder,
 };
 use clap::Parser;
 use once_cell::sync::OnceCell;
@@ -56,17 +56,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         };
 
         App::new()
-            .wrap(Logger::default())
+            .wrap(middleware::Logger::default())
+            .wrap(middleware::Compress::default())
             .wrap(cors)
-            .service(scope("/styles").wrap(cache::CacheInterceptor).service(
-                fs::Files::new("", client_path.as_path().join("ssr/styles/")).show_files_listing(),
-            ))
-            .service(scope("/images").wrap(cache::CacheInterceptor).service(
-                fs::Files::new("", client_path.as_path().join("ssr/images/")).show_files_listing(),
-            ))
-            .service(scope("/scripts").wrap(cache::CacheInterceptor).service(
-                fs::Files::new("", client_path.as_path().join("client/")).show_files_listing(),
-            ))
+            .service(
+                scope("/styles")
+                    .wrap(cache::CacheInterceptor::new(7))
+                    .service(
+                        fs::Files::new("", client_path.as_path().join("ssr/styles/"))
+                            .show_files_listing(),
+                    ),
+            )
+            .service(
+                scope("/images")
+                    .wrap(cache::CacheInterceptor::new(31))
+                    .service(
+                        fs::Files::new("", client_path.as_path().join("ssr/images/"))
+                            .show_files_listing(),
+                    ),
+            )
+            .service(
+                scope("/scripts")
+                    .wrap(cache::CacheInterceptor::new(7))
+                    .service(
+                        fs::Files::new("", client_path.as_path().join("client/"))
+                            .show_files_listing(),
+                    ),
+            )
             .service(index)
     })
     .bind(("0.0.0.0", args.port))?
